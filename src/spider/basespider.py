@@ -8,6 +8,8 @@ from lxml import html
 import csv
 import sys
 import requests
+from src.analyze.datafetch import *
+from src.util.csvwriter import *
 reload(sys)
 sys.setdefaultencoding('utf8')
 from lxml.html.clean import Cleaner
@@ -28,9 +30,9 @@ class lianjiaspider():
         if cookies!=None and isinstance(cookies,dict):
             r = requests.get(url,cookies=cookies)
         if r.status_code==200:
-            print 200
-        return r.content
-
+            return r.content
+        else:
+            return None
     def getHtml(self,url):
         page = urllib2.urlopen(url)
         mypage = page.read()
@@ -47,7 +49,6 @@ class lianjiaspider():
 
 def catchlianjiadata():
     baseurl='http://sh.lianjia.com/ershoufang/'
-    #headers = {'content-type': 'application/json'}
     s=lianjiaspider()
     content=s.getHtml(baseurl)
     tree = html.fromstring(content)
@@ -60,14 +61,12 @@ def catchlianjiadata():
         areaname=tree.xpath(u"//div[@class='option-list sub-option-list gio_plate']/a/@gahref")[1:]
         for area in areaname:
             print area
-            csvfile = file('e:\lianjia\lianjia'+district+'_'+area+'.csv', 'wb')
-            writer = csv.writer(csvfile)
+            csvfile,writer=csvwriter('e:\lianjia\lianjia'+district+'_'+area+'.csv')
             baseareaurl=baseurl+area
             areacontent=s.getHtml(baseareaurl)
             tree = html.fromstring(areacontent)
             tree.text_content()
             itemnums=tree.xpath(u"//div[@class='secondcon fl']/ul/li[3]/span[2]/strong/text()")
-            #pagenum=s.page_counter(areacontent)
             if itemnums!=0:
                 pagenum=(int(itemnums[0])/20)+1
             else:
@@ -80,36 +79,8 @@ def catchlianjiadata():
                     baseareaurlwithpage=baseareaurl+'/d'+str(j+1)
                     areacontentwithpage=s.getHtml(baseareaurlwithpage)
                     tree = html.fromstring(areacontentwithpage)
-                xiaoquname=tree.xpath(u"//div[@class='where']/a/span/text()")
-                fangxing=tree.xpath(u"//div[@class='where']/span[1]/text()")
-                mianji=tree.xpath(u"//div[@class='where']/span[2]/text()")
-                lclst=[]
-                louceng = tree.xpath(u"//div[@class='con']/span[1]")
-                for lc in louceng:
-                    lclst.append(lc.tail.encode('utf8').strip())
-                cxlst=[]
-                chaoxiang=tree.xpath(u"//div[@class='con']/span[2]")
-                for cx in chaoxiang:
-                    cxlst.append(cx.tail.encode('utf8').strip())
-                    #fangsubway=tree.xpath(u"//span[@class='fang-subway-ex']/span/text()")
-                    #taxfreeex=tree.xpath(u"//span[@class='taxfree-ex']/span/text()")
-                print len(cxlst)
-                print '----------------'
-                print len(lclst)
-                prices=tree.xpath(u"//div[@class='price']/span/text()")
-                perprice=tree.xpath(u"//div[@class='price-pre']/text()")
-                    #print type(perprice)
-                    #seennum=tree.xpath(u"//div[@class='square]/div/span/text()")
-                retlst=[]
-                if j+1!=pagenum:
-                    for i in range(20):
-                        rowdata=(xiaoquname[i].encode('utf-8'),fangxing[i].encode('utf-8'),mianji[i].encode('utf-8'),lclst[i],cxlst[i],prices[i].encode('utf-8'),perprice[i].encode('utf-8'))
-                        retlst.append(rowdata)
-                else:
-                    for i in range(len(xiaoquname)):
-                        rowdata=(xiaoquname[i].encode('utf-8'),fangxing[i].encode('utf-8'),mianji[i].encode('utf-8'),lclst[i],cxlst[i],prices[i].encode('utf-8'),perprice[i].encode('utf-8'))
-                        retlst.append(rowdata)
-                writer.writerows(retlst)
+                rowdata=analyzelianjiasecondhand(tree)
+                writer.writerows(rowdata)
             csvfile.close()
 
 
@@ -118,40 +89,9 @@ if __name__=='__main__':
     # headers = {'content-type': 'application/json'}
     s = lianjiaspider()
     content = s.getHtml(baseurl)
-    tree = html.fromstring(content)
-    elemenlst=tree.find_class('info-panel')
-    print elemenlst
     csvfile = file('e:\lianjia\lianjiatest.csv', 'wb')
     writer = csv.writer(csvfile)
-    rowlst=[]
-    for e in elemenlst:
-        #dataarr=e.text_content()
-        lst=[]
-        lst.append(e.find_class('nameEllipsis')[0].text_content())
-        #print e.xpath(u"//div/div/span[2]")
-        lst.append(''.join(e.find_class('con')[0].text_content().strip().split()))
-
-        subway= e.find_class('fang-subway-ex')
-        if len(subway)==0:
-            lst.append('')
-        else:
-            lst.append(subway[0].text_content())
-
-        taxfree=e.find_class('taxfree-ex')
-        if len(taxfree)==0:
-            lst.append('')
-        else:
-            lst.append(taxfree[0].text_content())
-
-        haskey=e.find_class('haskey-ex')
-        if len(haskey)==0:
-            lst.append('')
-        else:
-            lst.append(haskey[0].text_content())
-        print lst
-        rowlst.append(lst)
-        print '#######################'
-        #print dataarr
+    tree = html.fromstring(content)
     writer.writerows(rowlst)
         #print str(e.xpath(u"//div[@class='where']/span[2]/text()")).encode('utf8').strip()
     csvfile.close()
