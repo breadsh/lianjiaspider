@@ -1,6 +1,6 @@
 # coding=utf-8
-import urllib
 import urllib2
+import urllib
 #import requests
 import tornado.httpclient as hc
 import re
