@@ -7,13 +7,31 @@ import re
 from lxml import html
 import csv
 import sys
-from lxml import etree
+import requests
 
 reload(sys)
 sys.setdefaultencoding('utf8')
 from lxml.html.clean import Cleaner
 
 class lianjiaspider():
+    def readcookies(self,filename):
+        cookies={}
+        with open(filename) as f:
+            for line in f.readlines():
+                key, value = line.strip().split('=', 1)
+                cookies[key] = value
+            #print cookies
+        f.close()
+        return cookies
+    def getHtmlbyreq(self,url,cookies=None,data=None):
+        if data!=None and isinstance(data,dict):
+            r = requests.get(url,data)
+        if cookies!=None and isinstance(cookies,dict):
+            r = requests.get(url,cookies=cookies)
+        if r.status_code==200:
+            print 200
+        return r.content
+
     def getHtml(self,url):
         #proxy = 'http://%s:%s@%s' % ('jiangxiaowei-006','#EDC7ujm','10.228.46.21:8002')
         #opener = urllib2.build_opener(urllib2.ProxyHandler({'http':'http://jiangxiaowei-006:#EDC7ujm@10.228.46.21:8002'}))
